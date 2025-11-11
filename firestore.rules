@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function estaLogueado() { return request.auth != null; }
+    function esDueno(userId) { return estaLogueado() && request.auth.uid == userId; }
+    function esAdmin() { return estaLogueado() && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin'; }
+
+    // 1. Usuarios
+    match /usuarios/{userId} { allow read, write: if esDueno(userId) || esAdmin(); }
+
+    // 2. Sorteos
+    match /sorteos/{sorteoId} { allow read: if true; allow write: if esAdmin(); }
+
+    // 3. Paquetes
+    match /paquetesZenit/{paqueteId} { allow read: if true; allow write: if esAdmin(); }
+
+    // 4. Boletas
+    match /{path=**}/boletas/{boletaId} { allow read: if estaLogueado() && resource.data.userId == request.auth.uid; }
+
+    // 5. Pase de Temporada
+    match /paseDeTemporada/{nivelId} { allow read: if true; allow write: if esAdmin(); }
+
+    // ==========================================================
+    // INICIO DE LA CORRECIÓN (Nueva Regla 6)
+    // ==========================================================
+    // 6. Ventas (Historial Financiero)
+    // CRÍTICO: Solo el admin puede leer esto. Nadie más.
+    match /ventas/{ventaId} {
+      allow read: if esAdmin();
+      // No permitimos 'write' desde el cliente. Solo el Webhook (backend) puede crear ventas.
+    }
+    // ==========================================================
+    // FIN DE LA CORRECIÓN
+    // ==========================================================
+  }
+}

@@ -1,0 +1,11 @@
+# ==========================================================
+# ARCHIVO 27: apphosting.yaml (El Manifiesto de App Hosting)
+# ==========================================================
+
+# Define las variables de entorno para el Build y el Runtime
+env:
+  - variable: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    value: pk_test_51SNdmkHMwvYd6z6VMatUeEqHrGZnAZ9k6PUeDuJhLxBsZa9T4EHtUZxnlTjrErXKkHlAEdLTlQWvcowYasfIBpBh005rxUZV95
+    availability:
+      - BUILD # <-- ¡CRÍTICO! Hace la clave visible durante 'next build'
+      - RUNTIME

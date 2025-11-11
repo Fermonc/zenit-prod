@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* ... variables de Next.js ... */
+
+  /* Definiciones de colores Zenit */
+  --zenit-dark: #1A1A2E;
+  --zenit-primary: #8A2BE2;
+  /* ... etc. ... */
+}
+
+body {
+  background: var(--zenit-dark); /* Fondo principal oscuro */
+  color: white;
+}
+/* ... media query de modo oscuro ... */
