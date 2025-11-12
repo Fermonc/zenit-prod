@@ -1,7 +1,7 @@
 // ==========================================================
-// ARCHIVO 17: app/page.tsx (v10.2 - HOTFIX "Estética App" CORREGIDO)
-// BASADO EN EL v9.0 REAL (CON COMPONENTES AUXILIARES)
-// Corrige el typo 'setLoadingSortos'
+// ARCHIVO 17: app/page.tsx (v10.3 - HOTFIX "LÓGICA REVERTIDA")
+// Mantiene la UI de v10, pero revierte la lógica de useEffect a v9.0
+// para arreglar el fallo de índice compuesto.
 // ==========================================================
 "use client";
 
@@ -77,7 +77,7 @@ const TokenPromoBanner = ({ user, profile }: { user: any, profile: UserProfile |
 // --- (Fin de componentes auxiliares) ---
 
 
-// --- PÁGINA PRINCIPAL V10.2 (CSR "Estética App" Completa) ---
+// --- PÁGINA PRINCIPAL V10.3 (CSR "Estética App" Completa) ---
 export default function HomePage() {
   const { db, user } = useFirebase();
   const userProfileHook = useUserProfile(user?.uid);
@@ -87,50 +87,37 @@ export default function HomePage() {
   const [granZenit, setGranZenit] = useState<Sorteo | null>(null);
   const [sorteosRecientes, setSorteosRecientes] = useState<Sorteo[]>([]);
 
-  // (Lógica de carga de datos - OPTIMIZADA)
+  // ==========================================================
+  // --- INICIO DE HOTFIX v10.3 ---
+  // Revertimos la lógica de carga a la v9.0 (dos consultas)
+  // para evitar el error de índice compuesto.
   useEffect(() => {
     if (!db) return; 
     const fetchData = async () => {
       setLoadingSorteos(true);
       try {
-        // Lógica de carga optimizada: Solo 1 consulta para todo.
-        const qSorteos = query(
-          collection(db, "sorteos"), 
-          where("estado", "==", "financiando"), 
-          orderBy("esEventoPrincipal", "desc"), // El Hero (true) vendrá primero
-          orderBy("fechaCreacion", "desc"),
-          limit(6) // 1 Hero + 5 Populares
-        );
-        
-        const snapshot = await getDocs(qSorteos);
-        
-        const todosLosSorteos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sorteo));
-        
-        const hero = todosLosSorteos.find(s => s.esEventoPrincipal);
-        const recientes = todosLosSorteos.filter(s => !s.esEventoPrincipal);
+        // LÓGICA DE v9.0 (DOS CONSULTAS - PROBADA)
+        const qHero = query(collection(db, "sorteos"), where("esEventoPrincipal", "==", true), limit(1));
+        const heroSnap = await getDocs(qHero);
+        if (!heroSnap.empty) setGranZenit({ id: heroSnap.docs[0].id, ...heroSnap.docs[0].data() } as Sorteo);
 
-        setGranZenit(hero || null); // Si no hay hero, que sea null
-        setSorteosRecientes(recientes);
+        const qAll = query(collection(db, "sorteos"), where("esEventoPrincipal", "==", false), where("estado", "==", "financiando"), orderBy("fechaCreacion", "desc"), limit(3));
+        const allSnap = await getDocs(qAll);
+        setSorteosRecientes(allSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sorteo)));
 
       } catch (e) { console.error(e); toast.error("Error cargando sorteos destacados."); }
-      
-      // ==========================================================
-      // --- INICIO DE HOTFIX v10.2 ---
-      // Corregir el typo 'setLoadingSortos' a 'setLoadingSorteos'
       setLoadingSorteos(false);
-      // --- FIN DE HOTFIX v10.2 ---
-      // ==========================================================
     };
     fetchData();
   }, [db]);
+  // --- FIN DE HOTFIX v10.3 ---
+  // ==========================================================
 
   return (
     <>
       <WelcomePopup />
 
-      {/* ========================================================== */}
-      {/* SECCIÓN HÉROE (v9.0 - Con Estética "App") - SIN CAMBIOS */}
-      {/* ========================================================== */}
+      {/* SECCIÓN HÉROE (UI de v10 - SIN CAMBIOS) */}
       <div className="container mx-auto max-w-7xl px-4">
         {loadingSorteos ? (
           <div className="h-[70vh] min-h-[600px] flex items-center justify-center text-white"><p className="animate-pulse text-lg">Cargando sorteo principal...</p></div>
@@ -141,19 +128,17 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* --- SECCIÓN "CÓMO FUNCIONA" (Trust) --- */}
+      {/* SECCIÓN "CÓMO FUNCIONA" (Trust - SIN CAMBIOS) */}
       <div className="container mx-auto max-w-7xl px-4 text-center relative z-10">
         <TrustBar />
       </div>
 
-      {/* --- BANNER DE UPSELL (CLIENTE) --- */}
+      {/* BANNER DE UPSELL (CLIENTE - SIN CAMBIOS) */}
       <div className="container mx-auto max-w-7xl px-4">
         {!userProfileHook.loading && <TokenPromoBanner user={user} profile={profile} />}
       </div>
 
-      {/* ========================================================== */}
-      {/* SECCIÓN "SORTEOS POPULARES" (v10.1 - Estética "App") */}
-      {/* ========================================================== */}
+      {/* SECCIÓN "SORTEOS POPULARES" (UI de v10 - SIN CAMBIOS) */}
       <div className="container mx-auto max-w-7xl px-4">
         {loadingSorteos ? (
           <div className="text-center text-gray-500 py-16">Cargando...</div>
@@ -164,7 +149,7 @@ export default function HomePage() {
         )}
       </div>
       
-      {/* Espaciador inferior para que el scroll se sienta bien */}
+      {/* Espaciador inferior (SIN CAMBIOS) */}
       <div className="h-24"></div> 
     </>
   );
