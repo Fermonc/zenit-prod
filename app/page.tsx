@@ -1,5 +1,6 @@
 // ==========================================================
-// ARCHIVO 17: app/page.tsx (Versión "Difuminado" v8.1 - SINTAXIS CORREGIDA)
+// ARCHIVO 17: app/page.tsx (v9.0 - Con AppHero Estética "App")
+// MODIFICADO POR PROTOCOLO PFA
 // ==========================================================
 "use client";
 
@@ -14,11 +15,14 @@ import { FaTicketAlt, FaFire, FaShieldAlt, FaAward, FaGift, FaCoins, FaArrowRigh
 import toast from "react-hot-toast";
 import WelcomePopup from "@/components/marketing/WelcomePopup"; 
 
-// --- (Componentes UI: ProgressBar, EstadoTag, TrustBar, SorteoCardMini, TokenPromoBanner) ---
-// (Estos componentes auxiliares se mantienen idénticos a la v9.1/v8. 
-//  Asegúrese de que su archivo los contenga. Por brevedad, los omito aquí, 
-//  pero SÍ deben estar en el archivo final que guarde).
+// --- INICIO DE MODIFICACIÓN PFA (1/2) ---
+// Importamos el nuevo Hero en lugar del antiguo
+import AppHero from "@/components/home/AppHero";
+// --- FIN DE MODIFICACIÓN PFA (1/2) ---
 
+
+// --- (Componentes UI: ProgressBar, EstadoTag, TrustBar, SorteoCardMini, TokenPromoBanner) ---
+// (Estos componentes auxiliares se mantienen idénticos a la v8.1)
 // [INSERTE AQUÍ ProgressBar]
 const ProgressBar = ({ actual, meta }: { actual: number, meta: number }) => {
   const porcentaje = meta > 0 ? Math.min((actual / meta) * 100, 100) : 0;
@@ -72,14 +76,14 @@ const SorteoCardMini = ({ sorteo }: { sorteo: Sorteo }) => (
 );
 // [INSERTE AQUÍ TokenPromoBanner]
 const TokenPromoBanner = ({ user, profile }: { user: any, profile: UserProfile | null }) => {
-  if (!user) { /* ... (código idéntico de v9.1) ... */ }
-  if (profile && profile.fichasZenit < 20) { /* ... (código idéntico de v9.1) ... */ }
+  if (!user) { /* ... (código idéntico de v8.1) ... */ }
+  if (profile && profile.fichasZenit < 20) { /* ... (código idéntico de v8.1) ... */ }
   return null;
 };
 // --- (Fin de componentes auxiliares) ---
 
 
-// --- PÁGINA PRINCIPAL V8.1 (CSR "Difuminado") ---
+// --- PÁGINA PRINCIPAL V9.0 (CSR "AppHero") ---
 export default function HomePage() {
   const { db, user } = useFirebase();
   const userProfileHook = useUserProfile(user?.uid);
@@ -112,48 +116,20 @@ export default function HomePage() {
       <WelcomePopup />
 
       {/* ========================================================== */}
-      {/* SECCIÓN HÉROE (v8.1 - SINTAXIS CORREGIDA) */}
+      {/* --- INICIO DE MODIFICACIÓN PFA (2/2) --- */}
+      {/* SECCIÓN HÉROE (v9.0 - Con Estética "App") */}
+      {/* El banner "full-bleed" ha sido reemplazado por el componente 
+          AppHero envuelto en un contenedor estándar para la estética de "App" */}
       {/* ========================================================== */}
-      {loadingSorteos ? (
-        <div className="h-[70vh] min-h-[600px] flex items-center justify-center text-white"><p className="animate-pulse text-lg">Cargando sorteo principal...</p></div>
-      ) : granZenit ? (
-        <div className="relative h-[70vh] min-h-[600px] w-full overflow-hidden">
-          
-          <Image
-            src={granZenit.imagenURL || "/placeholder-sorteo.png"}
-            alt={granZenit.nombre}
-            layout="fill"
-            objectFit="cover"
-            className="z-0"
-            priority 
-          />
-          
-          <div className="absolute inset-0 bg-gradient-to-r from-zenit-dark via-zenit-dark/70 to-transparent z-10"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-zenit-dark via-transparent to-transparent z-10 opacity-40"></div>
-          
-          <div className="relative z-20 container mx-auto max-w-7xl px-4 h-full flex flex-col justify-center items-start text-left md:w-2/3">
-            <span className="bg-zenit-primary px-4 py-1.5 rounded-full text-white font-bold text-sm flex items-center gap-2 shadow-lg shadow-zenit-primary/30">
-              <FaFire /> ¡EVENTO PRINCIPAL!
-            </span>
-            <h1 className="text-5xl md:text-8xl font-extrabold text-white my-6 leading-none drop-shadow-2xl">
-              {granZenit.nombre}
-            </h1>
-            
-            {/* ========================================================== */}
-            {/* ¡AQUÍ ESTÁ LA CORRECCIÓN DE SINTAXIS! (</P> a </p>) */}
-            {/* ========================================================== */}
-            <p className="text-2xl text-zenit-primary font-bold mb-8">
-              Gana un premio valorado en ${granZenit.valorPremio.toLocaleString('es-CO')}
-            </p>
-            
-            <Link href={`/sorteos/${granZenit.id}`} className="bg-white text-zenit-dark hover:bg-zenit-accent font-extrabold py-4 px-12 rounded-xl text-xl transition-all transform hover:scale-105 flex items-center gap-3 shadow-xl active:scale-95">
-              <FaTicketAlt /> PARTICIPAR AHORA
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <div className="h-[70vh] min-h-[600px] flex items-center justify-center text-white">No hay evento principal activo.</div>
-      )}
+      <div className="container mx-auto max-w-7xl px-4">
+        {loadingSorteos ? (
+          <div className="h-[70vh] min-h-[600px] flex items-center justify-center text-white"><p className="animate-pulse text-lg">Cargando sorteo principal...</p></div>
+        ) : granZenit ? (
+          <AppHero sorteo={granZenit} />
+        ) : (
+          <div className="h-[70vh] min-h-[600px] flex items-center justify-center text-white">No hay evento principal activo.</div>
+        )}
+      </div>
       {/* ========================================================== */}
       {/* FIN DE LA SECCIÓN HÉROE */}
       {/* ========================================================== */}
