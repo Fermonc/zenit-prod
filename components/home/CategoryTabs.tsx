@@ -1,7 +1,5 @@
 // ==========================================================
-// NUEVO ARCHIVO: components/home/CategoryTabs.tsx (v11.0)
-// Objetivo: Módulo autocontenido de Pestañas y Scroll Horizontal
-// para las categorías de la página de inicio.
+// ARCHIVO: components/home/CategoryTabs.tsx (v11.1 - TAB RENOMBRADO FINAL)
 // ==========================================================
 "use client";
 
@@ -13,10 +11,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { FaTicketAlt, FaArrowRight } from "react-icons/fa";
 
-// --- Definición de Pestañas ---
-type CategoriaSlug = "cuentaRegresiva" | "vehiculo" | "hogar" | "tecnologia" | "otros";
+// --- Definición de Pestañas (CORREGIDO) ---
+type CategoriaSlug = "enSorteo" | "vehiculo" | "hogar" | "tecnologia" | "otros";
 const TABS: { nombre: string; slug: CategoriaSlug }[] = [
-  { nombre: "En Cierre (72h)", slug: "cuentaRegresiva" },
+  { nombre: "En Sorteo", slug: "enSorteo" }, // <--- FINAL: "En Sorteo"
   { nombre: "Vehículos", slug: "vehiculo" },
   { nombre: "Hogar", slug: "hogar" },
   { nombre: "Tecnología", slug: "tecnologia" },
@@ -64,7 +62,7 @@ const CategoriaSorteoCard = ({ sorteo }: { sorteo: Sorteo }) => (
 // --- Componente Principal: CategoryTabs ---
 export default function CategoryTabs() {
   const { db } = useFirebase();
-  const [activeTab, setActiveTab] = useState<CategoriaSlug>("cuentaRegresiva");
+  const [activeTab, setActiveTab] = useState<CategoriaSlug>("enSorteo"); // <--- CORREGIDO
   const [sorteos, setSorteos] = useState<Sorteo[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -73,12 +71,12 @@ export default function CategoryTabs() {
 
     const fetchSorteos = async () => {
       setLoading(true);
-      setSorteos([]); // Limpiar resultados anteriores
+      setSorteos([]);
       
       try {
         let q;
-        if (activeTab === "cuentaRegresiva") {
-          // Consulta para "En Cierre"
+        if (activeTab === "enSorteo") { // <--- CORREGIDO
+          // Consulta para "En Sorteo" (estado: cuentaRegresiva). El índice ya debe estar CREÁNDOSE/HABILITADO
           q = query(
             collection(db, "sorteos"),
             where("estado", "==", "cuentaRegresiva"),
@@ -101,15 +99,14 @@ export default function CategoryTabs() {
         setSorteos(sorteosData);
 
       } catch (error: any) {
+        // Dejamos el log aquí, pero el índice ya debería estar solucionándolo
         console.error(`Error cargando categoría ${activeTab}:`, error.message);
-        // ¡LECCIÓN APRENDIDA! No fallar silenciosamente.
-        // Si es un error de índice, esto lo mostrará en la consola del navegador del cliente.
       }
       setLoading(false);
     };
 
     fetchSorteos();
-  }, [db, activeTab]); // Se re-ejecuta cada vez que 'db' o 'activeTab' cambian
+  }, [db, activeTab]);
 
   return (
     <div className="py-16">

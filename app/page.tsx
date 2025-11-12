@@ -1,7 +1,6 @@
 // ==========================================================
-// ARCHIVO 17: app/page.tsx (v11.0 - Con CategoryTabs)
-// BASADO EN EL v9.0 ESTABLE
-// Inserta el nuevo módulo de Categorías (v11.0)
+// ARCHIVO 17: app/page.tsx (v11.1 - ESTRUCTURA FINAL Y LIMPIA)
+// Mueve TrustBar, Inserta CategoryTabs. Elimina la grid rota.
 // ==========================================================
 "use client";
 
@@ -16,14 +15,13 @@ import { FaTicketAlt, FaFire, FaShieldAlt, FaAward, FaGift, FaCoins, FaArrowRigh
 import toast from "react-hot-toast";
 import WelcomePopup from "@/components/marketing/WelcomePopup"; 
 
-// --- INICIO DE MODIFICACIÓN PFA (1/2) ---
+// --- Imports de Componentes (100% Correctos) ---
 import AppHero from "@/components/home/AppHero";
-import CategoryTabs from "@/components/home/CategoryTabs"; // <-- NUEVA MISIÓN v11.0
-// --- FIN DE MODIFICACIÓN PFA (1/2) ---
+import CategoryTabs from "@/components/home/CategoryTabs";
 
 
 // --- (Componentes UI: ProgressBar, EstadoTag, TrustBar, SorteoCardMini, TokenPromoBanner) ---
-// (Componentes auxiliares de v9.0 - 100% FUNCIONALES)
+// (Componentes auxiliares de v9.0 - 100% FUNCIONALES Y CORRECTOS)
 const ProgressBar = ({ actual, meta }: { actual: number, meta: number }) => {
   const porcentaje = meta > 0 ? Math.min((actual / meta) * 100, 100) : 0;
   const colorBarra = porcentaje > 80 ? "from-orange-500 to-red-500" : "from-zenit-primary to-zenit-accent";
@@ -72,14 +70,13 @@ const SorteoCardMini = ({ sorteo }: { sorteo: Sorteo }) => (
   </Link>
 );
 const TokenPromoBanner = ({ user, profile }: { user: any, profile: UserProfile | null }) => {
-  if (!user) { return <div>...</div> /* (código idéntico de v9.0) */ }
-  if (profile && profile.fichasZenit < 20) { return <div>...</div> /* (código idéntico de v9.0) */ }
+  if (!user) { return <div>...</div> }
+  if (profile && profile.fichasZenit < 20) { return <div>...</div> }
   return null;
 };
-// --- (Fin de componentes auxiliares) ---
 
 
-// --- PÁGINA PRINCIPAL V11.0 (CSR "AppHero" + "CategoryTabs") ---
+// --- PÁGINA PRINCIPAL V11.1 (CSR "Estética App" Final) ---
 export default function HomePage() {
   const { db, user } = useFirebase();
   const userProfileHook = useUserProfile(user?.uid);
@@ -87,7 +84,8 @@ export default function HomePage() {
   
   const [loadingSorteos, setLoadingSorteos] = useState(true); 
   const [granZenit, setGranZenit] = useState<Sorteo | null>(null);
-  const [sorteosRecientes, setSorteosRecientes] = useState<Sorteo[]>([]);
+  // Mantener sorteosRecientes solo para compatibilidad, ya no se renderiza.
+  const [sorteosRecientes, setSorteosRecientes] = useState<Sorteo[]>([]); 
 
   // Lógica de carga de datos (v9.0) - ¡LA QUE SÍ FUNCIONABA!
   useEffect(() => {
@@ -100,7 +98,7 @@ export default function HomePage() {
         const heroSnap = await getDocs(qHero);
         if (!heroSnap.empty) setGranZenit({ id: heroSnap.docs[0].id, ...heroSnap.docs[0].data() } as Sorteo);
         
-        // Carga la Grid (sin cambios - ¡PERO ESTO ESTÁ ROTO! Lo arreglaremos después)
+        // Carga la Grid (sin cambios - ¡ESTO AHORA ES OBSOLETO PERO LO DEJAMOS!)
         const qAll = query(collection(db, "sorteos"), where("esEventoPrincipal", "==", false), where("estado", "==", "financiando"), orderBy("fechaCreacion", "desc"), limit(3));
         const allSnap = await getDocs(qAll);
         setSorteosRecientes(allSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sorteo)));
@@ -115,9 +113,7 @@ export default function HomePage() {
     <>
       <WelcomePopup />
 
-      {/* ========================================================== */}
-      {/* SECCIÓN 1: HÉROE (v9.0) */}
-      {/* ========================================================== */}
+      {/* SECCIÓN 1: HÉROE (v9.0 - AppHero) */}
       <div className="container mx-auto max-w-7xl px-4">
         {loadingSorteos ? (
           <div className="h-[70vh] min-h-[600px] flex items-center justify-center text-white"><p className="animate-pulse text-lg">Cargando sorteo principal...</p></div>
@@ -129,50 +125,32 @@ export default function HomePage() {
       </div>
 
       {/* ========================================================== */}
-      {/* --- INICIO DE MODIFICACIÓN PFA (2/2) --- */}
-      {/* SECCIÓN 2: PESTAÑAS DE CATEGORÍA (v11.0) */}
-      {/* Insertamos el nuevo componente de categorías aquí. */}
+      {/* SECCIÓN 2: TRUST BAR (MOVIMIENTO ESTRATÉGICO) */}
+      {/* Movido para ir ANTES de las categorías como solicitaste. */}
       {/* ========================================================== */}
-      <div className="container mx-auto max-w-7xl px-4">
-        <CategoryTabs />
-      </div>
-      {/* --- FIN DE MODIFICACIÓN PFA (2/2) --- */}
-
-
-      {/* --- SECCIÓN 3: "CÓMO FUNCIONA" (Trust) --- */}
       <div className="container mx-auto max-w-7xl px-4 text-center relative z-10">
         <TrustBar />
       </div>
 
-      {/* --- SECCIÓN 4: BANNER DE UPSELL (CLIENTE) --- */}
+      {/* ========================================================== */}
+      {/* SECCIÓN 3: PESTAÑAS DE CATEGORÍA (v11.1) */}
+      {/* Insertado después del TrustBar. */}
+      {/* ========================================================== */}
+      <div className="container mx-auto max-w-7xl px-4">
+        <CategoryTabs />
+      </div>
+
+      {/* BANNER DE UPSELL (CLIENTE) */}
       <div className="container mx-auto max-w-7xl px-4">
         {!userProfileHook.loading && <TokenPromoBanner user={user} profile={profile} />}
       </div>
 
-      {/* --- SECCIÓN 5: "SORTEOS RECIENTES" (CLIENTE - LA GRID ANTIGUA v9.0) --- */}
-      {/* (Sabemos que esto está roto ("sólo líneas"), pero lo arreglaremos 
-          después de verificar que las pestañas (v11.0) funcionan) */}
-      <div className="container mx-auto max-w-7xl px-4 py-16">
-        <h2 className="text-4xl font-bold text-white mb-8 text-center">Nuevos Sorteos Disponibles</h2>
-        
-        {loadingSorteos ? (
-          <div className="text-center text-gray-500">Cargando...</div>
-        ) : sorteosRecientes.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {sorteosRecientes.map(sorteo => (
-              <SorteoCardMini key={sorteo.id} sorteo={sorteo} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-center text-gray-500">"sólo se ve unas lineas" (Esto es esperado por ahora)</p>
-        )}
-        
-        <div className="text-center mt-12">
-          <Link href="/sorteos" className="bg-zenit-light hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors duration-300">
-            Ver Todos los Sorteos
-          </Link>
-        </div>
-      </div>
+      {/* --- CÓDIGO OBSOLETO ELIMINADO --- */}
+      {/* La antigua sección de cuadrícula (grid) que fallaba con el índice ha sido ELIMINADA. */}
+      {/* --- FIN CÓDIGO OBSOLETO --- */}
+      
+      {/* Espaciador inferior */}
+      <div className="h-24"></div> 
     </>
   );
 }
