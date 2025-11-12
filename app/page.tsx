@@ -1,5 +1,5 @@
 // ==========================================================
-// ARCHIVO 17: app/page.tsx (v9.0 - Con AppHero Estética "App")
+// ARCHIVO 17: app/page.tsx (v10.0 - Final "Estética App")
 // MODIFICADO POR PROTOCOLO PFA
 // ==========================================================
 "use client";
@@ -15,14 +15,14 @@ import { FaTicketAlt, FaFire, FaShieldAlt, FaAward, FaGift, FaCoins, FaArrowRigh
 import toast from "react-hot-toast";
 import WelcomePopup from "@/components/marketing/WelcomePopup"; 
 
-// --- INICIO DE MODIFICACIÓN PFA (1/2) ---
-// Importamos el nuevo Hero en lugar del antiguo
+// --- INICIO DE MODIFICACIÓN PFA (1/3) ---
 import AppHero from "@/components/home/AppHero";
-// --- FIN DE MODIFICACIÓN PFA (1/2) ---
+import PopularSorteos from "@/components/home/PopularSorteos";
+// --- FIN DE MODIFICACIÓN PFA (1/3) ---
 
 
 // --- (Componentes UI: ProgressBar, EstadoTag, TrustBar, SorteoCardMini, TokenPromoBanner) ---
-// (Estos componentes auxiliares se mantienen idénticos a la v8.1)
+// (Estos componentes auxiliares se mantienen idénticos a la v9.0)
 // [INSERTE AQUÍ ProgressBar]
 const ProgressBar = ({ actual, meta }: { actual: number, meta: number }) => {
   const porcentaje = meta > 0 ? Math.min((actual / meta) * 100, 100) : 0;
@@ -56,6 +56,9 @@ const TrustBar = () => (
   </div>
 );
 // [INSERTE AQUÍ SorteoCardMini]
+// (Este componente, SorteoCardMini, ya NO se usa en esta página, 
+//  pero lo dejamos aquí por si TokenPromoBanner u otro lo necesita. 
+//  La lógica de PopularSorteos usa su propio "PopularSorteoCard" interno.)
 const SorteoCardMini = ({ sorteo }: { sorteo: Sorteo }) => (
   <Link href={`/sorteos/${sorteo.id}`} className="block group h-full">
     <div className="bg-zenit-light rounded-2xl overflow-hidden shadow-lg hover:shadow-zenit-primary/30 transition-all duration-300 hover:-translate-y-1 h-full flex flex-col border border-gray-700/50">
@@ -83,7 +86,7 @@ const TokenPromoBanner = ({ user, profile }: { user: any, profile: UserProfile |
 // --- (Fin de componentes auxiliares) ---
 
 
-// --- PÁGINA PRINCIPAL V9.0 (CSR "AppHero") ---
+// --- PÁGINA PRINCIPAL V10.0 (CSR "Estética App" Completa) ---
 export default function HomePage() {
   const { db, user } = useFirebase();
   const userProfileHook = useUserProfile(user?.uid);
@@ -99,12 +102,27 @@ export default function HomePage() {
     const fetchData = async () => {
       setLoadingSorteos(true);
       try {
-        const qHero = query(collection(db, "sorteos"), where("esEventoPrincipal", "==", true), limit(1));
-        const heroSnap = await getDocs(qHero);
-        if (!heroSnap.empty) setGranZenit({ id: heroSnap.docs[0].id, ...heroSnap.docs[0].data() } as Sorteo);
-        const qAll = query(collection(db, "sorteos"), where("esEventoPrincipal", "==", false), where("estado", "==", "financiando"), orderBy("fechaCreacion", "desc"), limit(3));
-        const allSnap = await getDocs(qAll);
-        setSorteosRecientes(allSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sorteo)));
+        // --- INICIO DE MODIFICACIÓN PFA (2/3) ---
+        // Lógica de carga optimizada: Solo 1 consulta para todo.
+        const qSorteos = query(
+          collection(db, "sorteos"), 
+          where("estado", "==", "financiando"), 
+          orderBy("esEventoPrincipal", "desc"), // El Hero (true) vendrá primero
+          orderBy("fechaCreacion", "desc"),
+          limit(6) // 1 Hero + 5 Populares
+        );
+        
+        const snapshot = await getDocs(qSorteos);
+        
+        const todosLosSorteos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sorteo));
+        
+        const hero = todosLosSorteos.find(s => s.esEventoPrincipal) || null;
+        const recientes = todosLosSorteos.filter(s => !s.esEventoPrincipal);
+
+        setGranZenit(hero);
+        setSorteosRecientes(recientes);
+        // --- FIN DE MODIFICACIÓN PFA (2/3) ---
+
       } catch (e) { console.error(e); toast.error("Error cargando sorteos destacados."); }
       setLoadingSorteos(false);
     };
@@ -116,10 +134,7 @@ export default function HomePage() {
       <WelcomePopup />
 
       {/* ========================================================== */}
-      {/* --- INICIO DE MODIFICACIÓN PFA (2/2) --- */}
       {/* SECCIÓN HÉROE (v9.0 - Con Estética "App") */}
-      {/* El banner "full-bleed" ha sido reemplazado por el componente 
-          AppHero envuelto en un contenedor estándar para la estética de "App" */}
       {/* ========================================================== */}
       <div className="container mx-auto max-w-7xl px-4">
         {loadingSorteos ? (
@@ -130,9 +145,6 @@ export default function HomePage() {
           <div className="h-[70vh] min-h-[600px] flex items-center justify-center text-white">No hay evento principal activo.</div>
         )}
       </div>
-      {/* ========================================================== */}
-      {/* FIN DE LA SECCIÓN HÉROE */}
-      {/* ========================================================== */}
 
       {/* --- SECCIÓN "CÓMO FUNCIONA" (Trust) --- */}
       <div className="container mx-auto max-w-7xl px-4 text-center relative z-10">
@@ -144,28 +156,27 @@ export default function HomePage() {
         {!userProfileHook.loading && <TokenPromoBanner user={user} profile={profile} />}
       </div>
 
-      {/* --- SECCIÓN "SORTEOS RECIENTES" (CLIENTE) --- */}
-      <div className="container mx-auto max-w-7xl px-4 py-16">
-        <h2 className="text-4xl font-bold text-white mb-8 text-center">Nuevos Sorteos Disponibles</h2>
-        
+      {/* ========================================================== */}
+      {/* --- INICIO DE MODIFICACIÓN PFA (3/3) --- */}
+      {/* SECCIÓN "SORTEOS POPULARES" (v10.0 - Estética "App") */}
+      {/* El "grid" antiguo ha sido reemplazado por el componente 
+          PopularSorteos con scroll horizontal. */}
+      {/* ========================================================== */}
+      <div className="container mx-auto max-w-7xl px-4">
         {loadingSorteos ? (
-          <div className="text-center text-gray-500">Cargando...</div>
+          <div className="text-center text-gray-500 py-16">Cargando...</div>
         ) : sorteosRecientes.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {sorteosRecientes.map(sorteo => (
-              <SorteoCardMini key={sorteo.id} sorteo={sorteo} />
-            ))}
-          </div>
+          <PopularSorteos sorteos={sorteosRecientes} />
         ) : (
-          <p className="text-center text-gray-500">No hay otros sorteos disponibles por ahora.</p>
+          <p className="text-center text-gray-500 py-16">No hay otros sorteos disponibles por ahora.</p>
         )}
-        
-        <div className="text-center mt-12">
-          <Link href="/sorteos" className="bg-zenit-light hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors duration-300">
-            Ver Todos los Sorteos
-          </Link>
-        </div>
       </div>
+      {/* ========================================================== */}
+      {/* FIN DE LA SECCIÓN POPULARES */}
+      {/* ========================================================== */}
+      
+      {/* Espaciador inferior para que el scroll se sienta bien */}
+      <div className="h-24"></div> 
     </>
   );
 }
