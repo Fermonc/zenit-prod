@@ -1,6 +1,6 @@
 // ==========================================================
-// ARCHIVO 17: app/page.tsx (v11.1 - ESTRUCTURA FINAL Y LIMPIA)
-// Mueve TrustBar, Inserta CategoryTabs. Elimina la grid rota.
+// ARCHIVO 17: app/page.tsx (v12.0 - ESTRUCTURA FINAL Y ESTABLE)
+// FUSIÓN DE LÓGICA DE CATEGORÍAS (De sorteos/page.tsx)
 // ==========================================================
 "use client";
 
@@ -11,17 +11,19 @@ import { useFirebase } from "@/context/FirebaseProvider";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { Sorteo, UserProfile } from "@/types/definitions"; 
 import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
-import { FaTicketAlt, FaFire, FaShieldAlt, FaAward, FaGift, FaCoins, FaArrowRight, FaClock } from "react-icons/fa";
+import { FaTicketAlt, FaFilter, FaFire, FaShieldAlt, FaAward, FaClock, FaCoins, FaArrowRight, FaGift } from "react-icons/fa";
 import toast from "react-hot-toast";
 import WelcomePopup from "@/components/marketing/WelcomePopup"; 
 
-// --- Imports de Componentes (100% Correctos) ---
+// --- Imports de Componentes UI ---
 import AppHero from "@/components/home/AppHero";
-import CategoryTabs from "@/components/home/CategoryTabs";
+// Reutilizaremos SorteoCardPro de /sorteos/page.tsx
+// NOTA: Debes asegurarte de que SorteoCardPro esté disponible en components/sorteos/SorteoCardPro.tsx 
+// (ya que no la teníamos en page.tsx antes). Por seguridad, la redefino aquí.
 
 
-// --- (Componentes UI: ProgressBar, EstadoTag, TrustBar, SorteoCardMini, TokenPromoBanner) ---
-// (Componentes auxiliares de v9.0 - 100% FUNCIONALES Y CORRECTOS)
+// --- (Componentes UI: ProgressBar, EstadoTag, TrustBar, SorteoCardPro, TokenPromoBanner) ---
+// NOTA: Todos estos auxiliares deben estar DEFINIDOS en este archivo.
 const ProgressBar = ({ actual, meta }: { actual: number, meta: number }) => {
   const porcentaje = meta > 0 ? Math.min((actual / meta) * 100, 100) : 0;
   const colorBarra = porcentaje > 80 ? "from-orange-500 to-red-500" : "from-zenit-primary to-zenit-accent";
@@ -51,19 +53,22 @@ const TrustBar = () => (
     <div className="flex items-center justify-center gap-3"><FaGift className="text-zenit-primary text-3xl" /><div><h4 className="text-white font-bold text-lg">Premios Garantizados</h4><p className="text-gray-400 text-sm">Entrega asegurada al ganador</p></div></div>
   </div>
 );
-const SorteoCardMini = ({ sorteo }: { sorteo: Sorteo }) => (
+const SorteoCardPro = ({ sorteo }: { sorteo: Sorteo }) => (
   <Link href={`/sorteos/${sorteo.id}`} className="block group h-full">
-    <div className="bg-zenit-light rounded-2xl overflow-hidden shadow-lg hover:shadow-zenit-primary/30 transition-all duration-300 hover:-translate-y-1 h-full flex flex-col border border-gray-700/50">
-      <div className="relative h-48 w-full">
+    <div className="bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 h-full flex flex-col border border-gray-700/50 hover:border-zenit-primary/50">
+      <div className="relative h-56 w-full flex-shrink-0">
         <Image src={sorteo.imagenURL || "/placeholder-sorteo.png"} alt={sorteo.nombre} layout="fill" objectFit="cover" className="group-hover:scale-110 transition-transform duration-700" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-        <div className="absolute top-3 left-3"><EstadoTag estado={sorteo.estado} /></div>
-        <h3 className="absolute bottom-3 left-3 right-3 text-lg font-bold text-white leading-tight line-clamp-2 drop-shadow-md">{sorteo.nombre}</h3>
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent opacity-90"></div>
+        <div className="absolute top-3 left-3"><EstadoTag estado={sorteo.estado} meta={sorteo.metaRecaudacion} actual={sorteo.recaudacionActual} /></div>
+        <div className="absolute bottom-4 left-4 right-4"><h3 className="text-xl font-bold text-white leading-tight line-clamp-2 drop-shadow-md">{sorteo.nombre}</h3></div>
       </div>
-      <div className="p-4 flex-grow flex flex-col">
-        <div className="flex justify-between items-center">
-          <div><p className="text-xs text-gray-500 uppercase font-bold">Premio</p><p className="text-xl font-extrabold text-white">${sorteo.valorPremio.toLocaleString('es-CO')}</p></div>
-          <div className="text-right"><p className="text-xs text-gray-500 uppercase font-bold">Entrada</p><div className="flex items-center justify-end gap-1 text-zenit-primary font-bold"><FaTicketAlt className="text-sm" /> {sorteo.precioBoleta}</div></div>
+      <div className="p-5 flex flex-col flex-grow bg-gray-800/50">
+        <div className="mt-auto">
+          <div className="flex justify-between items-end mb-3">
+            <div><p className="text-xs text-gray-500 uppercase font-bold mb-1">Valor del Premio</p><p className="text-2xl font-extrabold text-white tracking-tight">${sorteo.valorPremio.toLocaleString('es-CO')}</p></div>
+            <div className="text-right bg-zenit-dark/50 p-2 rounded-lg border border-white/5"><p className="text-[10px] text-gray-400 uppercase font-bold">Entrada</p><div className="flex items-center justify-end gap-1 text-zenit-primary font-bold"><FaTicketAlt className="text-sm" /> {sorteo.precioBoleta}</div></div>
+          </div>
+          {sorteo.estado === 'financiando' && (<ProgressBar actual={sorteo.recaudacionActual} meta={sorteo.metaRecaudacion} />)}
         </div>
       </div>
     </div>
@@ -74,83 +79,149 @@ const TokenPromoBanner = ({ user, profile }: { user: any, profile: UserProfile |
   if (profile && profile.fichasZenit < 20) { return <div>...</div> }
   return null;
 };
+// --- (Fin de componentes auxiliares) ---
 
 
-// --- PÁGINA PRINCIPAL V11.1 (CSR "Estética App" Final) ---
+// --- PÁGINA PRINCIPAL V12.0 (CSR "Estética App" Final) ---
 export default function HomePage() {
   const { db, user } = useFirebase();
   const userProfileHook = useUserProfile(user?.uid);
   const profile = (userProfileHook.profile as UserProfile) || null;
   
-  const [loadingSorteos, setLoadingSorteos] = useState(true); 
+  const [loading, setLoading] = useState(true); 
   const [granZenit, setGranZenit] = useState<Sorteo | null>(null);
-  // Mantener sorteosRecientes solo para compatibilidad, ya no se renderiza.
-  const [sorteosRecientes, setSorteosRecientes] = useState<Sorteo[]>([]); 
 
-  // Lógica de carga de datos (v9.0) - ¡LA QUE SÍ FUNCIONABA!
+  // --- LÓGICA DE CATEGORÍAS ESTABLE (COPIADA DE /sorteos/page.tsx) ---
+  const [todosLosSorteos, setTodosLosSorteos] = useState<Sorteo[]>([]);
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("En Sorteo"); // Valor inicial
+
   useEffect(() => {
     if (!db) return; 
     const fetchData = async () => {
-      setLoadingSorteos(true);
+      setLoading(true);
       try {
         // Carga el Hero (sin cambios)
         const qHero = query(collection(db, "sorteos"), where("esEventoPrincipal", "==", true), limit(1));
         const heroSnap = await getDocs(qHero);
         if (!heroSnap.empty) setGranZenit({ id: heroSnap.docs[0].id, ...heroSnap.docs[0].data() } as Sorteo);
         
-        // Carga la Grid (sin cambios - ¡ESTO AHORA ES OBSOLETO PERO LO DEJAMOS!)
-        const qAll = query(collection(db, "sorteos"), where("esEventoPrincipal", "==", false), where("estado", "==", "financiando"), orderBy("fechaCreacion", "desc"), limit(3));
+        // Carga TODOS los sorteos no principales (v9.0) - SÓLO POR FECHA, EL FILTRADO ES EN EL CLIENTE.
+        // Esto es lo que evita el error de índice.
+        const qAll = query(collection(db, "sorteos"), where("esEventoPrincipal", "==", false), orderBy("fechaCreacion", "desc"));
         const allSnap = await getDocs(qAll);
-        setSorteosRecientes(allSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sorteo)));
+        setTodosLosSorteos(allSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sorteo)));
       
       } catch (e) { console.error(e); toast.error("Error cargando sorteos destacados."); }
-      setLoadingSorteos(false);
+      setLoading(false);
     };
     fetchData();
   }, [db]);
 
+  // CATEGORÍAS Y FILTRADO (COPIADO DE /sorteos/page.tsx)
+  const categorias = useMemo(() => {
+    // Las categorías estáticas para la página principal
+    return ["En Sorteo", "Vehículos", "Hogar", "Tecnología", "Otros"];
+  }, []);
+
+  const sorteosFiltrados = useMemo(() => {
+    // Si la categoría es "En Sorteo", filtramos por el estado 'cuentaRegresiva'
+    if (categoriaSeleccionada === "En Sorteo") {
+        return todosLosSorteos.filter(s => s.estado === 'cuentaRegresiva').slice(0, 5); // Limitar a 5 para el scroll
+    } 
+    // Si es otra categoría, filtramos por el campo 'categoria'
+    return todosLosSorteos.filter(s => (s.categoria || "Otros") === categoriaSeleccionada && s.estado === 'financiando').slice(0, 5); // Limitar a 5 para el scroll
+  }, [todosLosSorteos, categoriaSeleccionada]);
+
+  // --- FIN DE LÓGICA ESTABLE ---
+
+  if (loading) return <div className="flex h-[60vh] items-center justify-center text-white">Cargando experiencia...</div>;
+
   return (
-    <>
+    <div className="container mx-auto max-w-7xl py-6 px-4">
       <WelcomePopup />
 
       {/* SECCIÓN 1: HÉROE (v9.0 - AppHero) */}
       <div className="container mx-auto max-w-7xl px-4">
-        {loadingSorteos ? (
-          <div className="h-[70vh] min-h-[600px] flex items-center justify-center text-white"><p className="animate-pulse text-lg">Cargando sorteo principal...</p></div>
-        ) : granZenit ? (
-          <AppHero sorteo={granZenit} />
-        ) : (
-          <div className="h-[70vh] min-h-[600px] flex items-center justify-center text-white">No hay evento principal activo.</div>
-        )}
+        {granZenit && <AppHero sorteo={granZenit} />}
       </div>
 
-      {/* ========================================================== */}
       {/* SECCIÓN 2: TRUST BAR (MOVIMIENTO ESTRATÉGICO) */}
-      {/* Movido para ir ANTES de las categorías como solicitaste. */}
-      {/* ========================================================== */}
       <div className="container mx-auto max-w-7xl px-4 text-center relative z-10">
         <TrustBar />
       </div>
 
       {/* ========================================================== */}
-      {/* SECCIÓN 3: PESTAÑAS DE CATEGORÍA (v11.1) */}
-      {/* Insertado después del TrustBar. */}
+      {/* SECCIÓN 3: CATEGORÍAS Y SCROLL HORIZONTAL (v12.0) */}
+      {/* Implementado en lugar del componente CategoryTabs que fallaba. */}
       {/* ========================================================== */}
-      <div className="container mx-auto max-w-7xl px-4">
-        <CategoryTabs />
+      <div className="py-16">
+        {/* Pestañas */}
+        <div className="flex flex-nowrap gap-3 md:gap-4 overflow-x-auto pb-4 mb-6 -mx-4 px-4 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
+          <FaFilter className="text-zenit-primary flex-shrink-0 mt-3 hidden md:block" />
+          {categorias.map(cat => (
+            <button 
+              key={cat} 
+              onClick={() => setCategoriaSeleccionada(cat)} 
+              className={`
+                flex-shrink-0 px-5 py-3 rounded-full font-bold text-sm md:text-base
+                transition-colors duration-300 border
+                ${categoriaSeleccionada === cat 
+                  ? 'bg-zenit-primary text-white border-zenit-primary' 
+                  : 'bg-zenit-light border-gray-700 text-gray-300 hover:bg-gray-800 hover:border-gray-600'
+                }
+              `}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Scroll Horizontal de Sorteos */}
+        {sorteosFiltrados.length === 0 ? (
+          <div className="text-center text-gray-500 py-10 bg-zenit-dark rounded-2xl border border-gray-800 mx-4">
+            <p className="font-bold text-white text-lg">No hay sorteos disponibles en esta categoría</p>
+            <p className="text-sm">Explora otra categoría o visita la página de sorteos.</p>
+          </div>
+        ) : (
+          <div className="
+            flex flex-nowrap gap-6 
+            overflow-x-auto py-4 
+            scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent
+            snap-x snap-mandatory -mx-4 px-4
+          ">
+            {sorteosFiltrados.map(sorteo => (
+              // Usaremos el SorteoCardPro que ya está definido arriba
+              <div key={sorteo.id} className="w-64 md:w-72 flex-shrink-0 snap-start">
+                <SorteoCardPro sorteo={sorteo} /> 
+              </div>
+            ))}
+            
+            {/* Tarjeta final para ver más */}
+            <Link 
+              href="/sorteos"
+              className="
+                block w-64 md:w-72 flex-shrink-0 snap-start
+                group rounded-2xl bg-zenit-dark border-2 border-dashed border-gray-700 
+                hover:border-zenit-primary transition-all duration-300 
+                flex flex-col items-center justify-center text-gray-500 hover:text-white
+              "
+            >
+              <FaArrowRight className="w-10 h-10 mb-4 transform transition-transform group-hover:scale-125" />
+              <span className="font-bold text-lg">Ver Todos los Sorteos</span>
+              <p className="text-sm">¡Y mucho más!</p>
+            </Link>
+
+          </div>
+        )}
       </div>
 
       {/* BANNER DE UPSELL (CLIENTE) */}
       <div className="container mx-auto max-w-7xl px-4">
         {!userProfileHook.loading && <TokenPromoBanner user={user} profile={profile} />}
       </div>
-
-      {/* --- CÓDIGO OBSOLETO ELIMINADO --- */}
-      {/* La antigua sección de cuadrícula (grid) que fallaba con el índice ha sido ELIMINADA. */}
-      {/* --- FIN CÓDIGO OBSOLETO --- */}
       
       {/* Espaciador inferior */}
       <div className="h-24"></div> 
-    </>
+    </div>
   );
 }
