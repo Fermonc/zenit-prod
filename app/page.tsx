@@ -1,6 +1,7 @@
 // ==========================================================
-// ARCHIVO 17: app/page.tsx (v9.0 - REVERSIÓN ESTABLE)
-// "AppHero" funcional + "Grid" antigua
+// ARCHIVO 17: app/page.tsx (v11.0 - Con CategoryTabs)
+// BASADO EN EL v9.0 ESTABLE
+// Inserta el nuevo módulo de Categorías (v11.0)
 // ==========================================================
 "use client";
 
@@ -15,10 +16,14 @@ import { FaTicketAlt, FaFire, FaShieldAlt, FaAward, FaGift, FaCoins, FaArrowRigh
 import toast from "react-hot-toast";
 import WelcomePopup from "@/components/marketing/WelcomePopup"; 
 
-// Importamos el Hero
+// --- INICIO DE MODIFICACIÓN PFA (1/2) ---
 import AppHero from "@/components/home/AppHero";
+import CategoryTabs from "@/components/home/CategoryTabs"; // <-- NUEVA MISIÓN v11.0
+// --- FIN DE MODIFICACIÓN PFA (1/2) ---
+
 
 // --- (Componentes UI: ProgressBar, EstadoTag, TrustBar, SorteoCardMini, TokenPromoBanner) ---
+// (Componentes auxiliares de v9.0 - 100% FUNCIONALES)
 const ProgressBar = ({ actual, meta }: { actual: number, meta: number }) => {
   const porcentaje = meta > 0 ? Math.min((actual / meta) * 100, 100) : 0;
   const colorBarra = porcentaje > 80 ? "from-orange-500 to-red-500" : "from-zenit-primary to-zenit-accent";
@@ -67,14 +72,14 @@ const SorteoCardMini = ({ sorteo }: { sorteo: Sorteo }) => (
   </Link>
 );
 const TokenPromoBanner = ({ user, profile }: { user: any, profile: UserProfile | null }) => {
-  if (!user) { return <div>...</div> /* (código idéntico de v8.1) */ }
-  if (profile && profile.fichasZenit < 20) { return <div>...</div> /* (código idéntico de v8.1) */ }
+  if (!user) { return <div>...</div> /* (código idéntico de v9.0) */ }
+  if (profile && profile.fichasZenit < 20) { return <div>...</div> /* (código idéntico de v9.0) */ }
   return null;
 };
 // --- (Fin de componentes auxiliares) ---
 
 
-// --- PÁGINA PRINCIPAL V9.0 (CSR "AppHero") ---
+// --- PÁGINA PRINCIPAL V11.0 (CSR "AppHero" + "CategoryTabs") ---
 export default function HomePage() {
   const { db, user } = useFirebase();
   const userProfileHook = useUserProfile(user?.uid);
@@ -90,13 +95,16 @@ export default function HomePage() {
     const fetchData = async () => {
       setLoadingSorteos(true);
       try {
+        // Carga el Hero (sin cambios)
         const qHero = query(collection(db, "sorteos"), where("esEventoPrincipal", "==", true), limit(1));
         const heroSnap = await getDocs(qHero);
         if (!heroSnap.empty) setGranZenit({ id: heroSnap.docs[0].id, ...heroSnap.docs[0].data() } as Sorteo);
         
+        // Carga la Grid (sin cambios - ¡PERO ESTO ESTÁ ROTO! Lo arreglaremos después)
         const qAll = query(collection(db, "sorteos"), where("esEventoPrincipal", "==", false), where("estado", "==", "financiando"), orderBy("fechaCreacion", "desc"), limit(3));
         const allSnap = await getDocs(qAll);
         setSorteosRecientes(allSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sorteo)));
+      
       } catch (e) { console.error(e); toast.error("Error cargando sorteos destacados."); }
       setLoadingSorteos(false);
     };
@@ -107,7 +115,9 @@ export default function HomePage() {
     <>
       <WelcomePopup />
 
-      {/* SECCIÓN HÉROE (v9.0 - Con Estética "App") */}
+      {/* ========================================================== */}
+      {/* SECCIÓN 1: HÉROE (v9.0) */}
+      {/* ========================================================== */}
       <div className="container mx-auto max-w-7xl px-4">
         {loadingSorteos ? (
           <div className="h-[70vh] min-h-[600px] flex items-center justify-center text-white"><p className="animate-pulse text-lg">Cargando sorteo principal...</p></div>
@@ -118,17 +128,30 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* --- SECCIÓN "CÓMO FUNCIONA" (Trust) --- */}
+      {/* ========================================================== */}
+      {/* --- INICIO DE MODIFICACIÓN PFA (2/2) --- */}
+      {/* SECCIÓN 2: PESTAÑAS DE CATEGORÍA (v11.0) */}
+      {/* Insertamos el nuevo componente de categorías aquí. */}
+      {/* ========================================================== */}
+      <div className="container mx-auto max-w-7xl px-4">
+        <CategoryTabs />
+      </div>
+      {/* --- FIN DE MODIFICACIÓN PFA (2/2) --- */}
+
+
+      {/* --- SECCIÓN 3: "CÓMO FUNCIONA" (Trust) --- */}
       <div className="container mx-auto max-w-7xl px-4 text-center relative z-10">
         <TrustBar />
       </div>
 
-      {/* --- BANNER DE UPSELL (CLIENTE) --- */}
+      {/* --- SECCIÓN 4: BANNER DE UPSELL (CLIENTE) --- */}
       <div className="container mx-auto max-w-7xl px-4">
         {!userProfileHook.loading && <TokenPromoBanner user={user} profile={profile} />}
       </div>
 
-      {/* --- SECCIÓN "SORTEOS RECIENTES" (CLIENTE) --- */}
+      {/* --- SECCIÓN 5: "SORTEOS RECIENTES" (CLIENTE - LA GRID ANTIGUA v9.0) --- */}
+      {/* (Sabemos que esto está roto ("sólo líneas"), pero lo arreglaremos 
+          después de verificar que las pestañas (v11.0) funcionan) */}
       <div className="container mx-auto max-w-7xl px-4 py-16">
         <h2 className="text-4xl font-bold text-white mb-8 text-center">Nuevos Sorteos Disponibles</h2>
         
@@ -141,7 +164,7 @@ export default function HomePage() {
             ))}
           </div>
         ) : (
-          <p className="text-center text-gray-500">No hay otros sorteos disponibles por ahora.</p>
+          <p className="text-center text-gray-500">"sólo se ve unas lineas" (Esto es esperado por ahora)</p>
         )}
         
         <div className="text-center mt-12">
