@@ -1,5 +1,6 @@
 // ==========================================================
-// ARCHIVO 19: app/perfil/page.tsx (v7 - Con BoletaCard Profesional)
+// ARCHIVO 19: app/perfil/page.tsx (v8 - Con WalletHeader)
+// MODIFICADO POR PROTOCOLO PFA
 // ==========================================================
 "use client";
 
@@ -15,8 +16,12 @@ import { FaCoins, FaGift, FaSignOutAlt, FaTrophy, FaUser, FaTicketAlt, FaHistory
 import { httpsCallable } from "firebase/functions";
 import { useFirestoreCollection } from "@/hooks/useFirestoreCollection"; 
 import { useUserBoletas } from "@/hooks/useUserBoletas";
-// ¡NUEVO IMPORT!
 import BoletaCard from "@/components/perfil/BoletaCard";
+
+// --- INICIO DE MODIFICACIÓN PFA (1/2) ---
+import WalletHeader from "@/components/perfil/WalletHeader";
+// --- FIN DE MODIFICACIÓN PFA (1/2) ---
+
 
 // --- (Componente CountdownTimer v4.4 - SIN CAMBIOS, mantener igual) ---
 const CountdownTimer = ({ ultimoReclamo, onReclamar, loading }: { ultimoReclamo: Timestamp | null; onReclamar: () => void; loading: boolean; }) => {
@@ -89,17 +94,12 @@ export default function PerfilPage() {
 
   return (
     <div className="container mx-auto max-w-5xl py-8 px-4">
-      {/* HEADER (Sin cambios) */}
-      <div className="bg-zenit-light p-6 rounded-2xl shadow-2xl mb-8 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="w-20 h-20 bg-zenit-primary rounded-full flex items-center justify-center shadow-lg"><FaUser className="w-10 h-10 text-white" /></div>
-          <div><h1 className="text-2xl font-bold text-white">{profile.email}</h1><p className="text-zenit-primary flex items-center gap-2"><FaTrophy /> Nivel {profile.nivelesReclamados?.length || 0}</p></div>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right bg-zenit-dark p-3 rounded-xl"><p className="text-xs text-gray-400 uppercase font-bold">Mis Fichas</p><p className="text-3xl font-extrabold text-zenit-accent flex items-center justify-end gap-2">{profile.fichasZenit} <FaCoins className="text-xl" /></p></div>
-          <button onClick={handleLogout} className="bg-gray-700 hover:bg-zenit-error p-3 rounded-xl text-white transition-colors" title="Cerrar Sesión"><FaSignOutAlt /></button>
-        </div>
-      </div>
+      
+      {/* --- INICIO DE MODIFICACIÓN PFA (2/2) --- */}
+      {/* El bloque <div className="bg-zenit-light..."> ha sido reemplazado por: */}
+      <WalletHeader profile={profile} onLogout={handleLogout} />
+      {/* --- FIN DE MODIFICACIÓN PFA (2/2) --- */}
+
 
       {/* TABS */}
       <div className="flex mb-8 border-b border-gray-800">
@@ -107,10 +107,9 @@ export default function PerfilPage() {
         <button onClick={() => setActiveTab("boletas")} className={`px-6 py-4 font-bold flex items-center gap-2 border-b-4 transition-all ${activeTab === "boletas" ? "border-zenit-primary text-white" : "border-transparent text-gray-500 hover:text-gray-300"}`}><FaHistory /> Mis Boletas</button>
       </div>
 
-      {/* CONTENIDO */}
+      {/* CONTENIDO (SIN CAMBIOS) */}
       {activeTab === "dashboard" ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* (Contenido del Dashboard - SIN CAMBIOS) */}
           <div className="bg-zenit-light p-6 rounded-xl shadow-lg border-t-4 border-zenit-accent"><div className="flex items-center gap-3 mb-4"><FaGift className="text-zenit-accent w-6 h-6" /><h3 className="font-bold text-white">Recompensa Diaria</h3></div><CountdownTimer ultimoReclamo={profile.ultimoReclamoDiario} onReclamar={handleReclamoDiario} loading={loadingDiaria} /></div>
           <div className="md:col-span-2 bg-zenit-light p-6 rounded-xl shadow-lg border-t-4 border-zenit-primary">
             <div className="flex items-center justify-between mb-6"><div className="flex items-center gap-3"><FaTrophy className="text-zenit-primary w-6 h-6" /><h3 className="font-bold text-white">Pase de Temporada</h3></div><p className="text-2xl font-extrabold text-white">{profile.paseTemporadaXP} <span className="text-sm text-zenit-primary">XP</span></p></div>
@@ -119,7 +118,6 @@ export default function PerfilPage() {
           </div>
         </div>
       ) : (
-        // --- TAB 2: MIS BOLETAS (¡PROFESIONALIZADO!) ---
         <div className="bg-zenit-light rounded-2xl shadow-xl overflow-hidden pb-4">
           {boletasLoading ? (
             <div className="p-12 text-center text-gray-500">Cargando historial...</div>
@@ -134,7 +132,6 @@ export default function PerfilPage() {
             <div className="py-4">
               <h3 className="text-xl font-bold text-white px-8 mb-4">Historial de Participación</h3>
               <div className="space-y-1">
-                {/* Renderizamos las nuevas BoletaCard */}
                 {boletas.map((boleta) => (
                   <BoletaCard key={boleta.id} boleta={boleta} />
                 ))}
