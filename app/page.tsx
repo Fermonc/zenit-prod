@@ -1,7 +1,6 @@
 // ==========================================================
-// ARCHIVO 17: app/page.tsx (v10.3 - HOTFIX "LÓGICA REVERTIDA")
-// Mantiene la UI de v10, pero revierte la lógica de useEffect a v9.0
-// para arreglar el fallo de índice compuesto.
+// ARCHIVO 17: app/page.tsx (v9.0 - REVERSIÓN ESTABLE)
+// "AppHero" funcional + "Grid" antigua
 // ==========================================================
 "use client";
 
@@ -16,12 +15,10 @@ import { FaTicketAlt, FaFire, FaShieldAlt, FaAward, FaGift, FaCoins, FaArrowRigh
 import toast from "react-hot-toast";
 import WelcomePopup from "@/components/marketing/WelcomePopup"; 
 
-// --- Imports de Nuevos Componentes ---
+// Importamos el Hero
 import AppHero from "@/components/home/AppHero";
-import PopularSorteos from "@/components/home/PopularSorteos";
 
 // --- (Componentes UI: ProgressBar, EstadoTag, TrustBar, SorteoCardMini, TokenPromoBanner) ---
-// (Estos componentes auxiliares se mantienen idénticos a la v9.0 - ¡CRÍTICO!)
 const ProgressBar = ({ actual, meta }: { actual: number, meta: number }) => {
   const porcentaje = meta > 0 ? Math.min((actual / meta) * 100, 100) : 0;
   const colorBarra = porcentaje > 80 ? "from-orange-500 to-red-500" : "from-zenit-primary to-zenit-accent";
@@ -77,7 +74,7 @@ const TokenPromoBanner = ({ user, profile }: { user: any, profile: UserProfile |
 // --- (Fin de componentes auxiliares) ---
 
 
-// --- PÁGINA PRINCIPAL V10.3 (CSR "Estética App" Completa) ---
+// --- PÁGINA PRINCIPAL V9.0 (CSR "AppHero") ---
 export default function HomePage() {
   const { db, user } = useFirebase();
   const userProfileHook = useUserProfile(user?.uid);
@@ -87,37 +84,30 @@ export default function HomePage() {
   const [granZenit, setGranZenit] = useState<Sorteo | null>(null);
   const [sorteosRecientes, setSorteosRecientes] = useState<Sorteo[]>([]);
 
-  // ==========================================================
-  // --- INICIO DE HOTFIX v10.3 ---
-  // Revertimos la lógica de carga a la v9.0 (dos consultas)
-  // para evitar el error de índice compuesto.
+  // Lógica de carga de datos (v9.0) - ¡LA QUE SÍ FUNCIONABA!
   useEffect(() => {
     if (!db) return; 
     const fetchData = async () => {
       setLoadingSorteos(true);
       try {
-        // LÓGICA DE v9.0 (DOS CONSULTAS - PROBADA)
         const qHero = query(collection(db, "sorteos"), where("esEventoPrincipal", "==", true), limit(1));
         const heroSnap = await getDocs(qHero);
         if (!heroSnap.empty) setGranZenit({ id: heroSnap.docs[0].id, ...heroSnap.docs[0].data() } as Sorteo);
-
+        
         const qAll = query(collection(db, "sorteos"), where("esEventoPrincipal", "==", false), where("estado", "==", "financiando"), orderBy("fechaCreacion", "desc"), limit(3));
         const allSnap = await getDocs(qAll);
         setSorteosRecientes(allSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sorteo)));
-
       } catch (e) { console.error(e); toast.error("Error cargando sorteos destacados."); }
       setLoadingSorteos(false);
     };
     fetchData();
   }, [db]);
-  // --- FIN DE HOTFIX v10.3 ---
-  // ==========================================================
 
   return (
     <>
       <WelcomePopup />
 
-      {/* SECCIÓN HÉROE (UI de v10 - SIN CAMBIOS) */}
+      {/* SECCIÓN HÉROE (v9.0 - Con Estética "App") */}
       <div className="container mx-auto max-w-7xl px-4">
         {loadingSorteos ? (
           <div className="h-[70vh] min-h-[600px] flex items-center justify-center text-white"><p className="animate-pulse text-lg">Cargando sorteo principal...</p></div>
@@ -128,29 +118,38 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* SECCIÓN "CÓMO FUNCIONA" (Trust - SIN CAMBIOS) */}
+      {/* --- SECCIÓN "CÓMO FUNCIONA" (Trust) --- */}
       <div className="container mx-auto max-w-7xl px-4 text-center relative z-10">
         <TrustBar />
       </div>
 
-      {/* BANNER DE UPSELL (CLIENTE - SIN CAMBIOS) */}
+      {/* --- BANNER DE UPSELL (CLIENTE) --- */}
       <div className="container mx-auto max-w-7xl px-4">
         {!userProfileHook.loading && <TokenPromoBanner user={user} profile={profile} />}
       </div>
 
-      {/* SECCIÓN "SORTEOS POPULARES" (UI de v10 - SIN CAMBIOS) */}
-      <div className="container mx-auto max-w-7xl px-4">
+      {/* --- SECCIÓN "SORTEOS RECIENTES" (CLIENTE) --- */}
+      <div className="container mx-auto max-w-7xl px-4 py-16">
+        <h2 className="text-4xl font-bold text-white mb-8 text-center">Nuevos Sorteos Disponibles</h2>
+        
         {loadingSorteos ? (
-          <div className="text-center text-gray-500 py-16">Cargando...</div>
+          <div className="text-center text-gray-500">Cargando...</div>
         ) : sorteosRecientes.length > 0 ? (
-          <PopularSorteos sorteos={sorteosRecientes} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {sorteosRecientes.map(sorteo => (
+              <SorteoCardMini key={sorteo.id} sorteo={sorteo} />
+            ))}
+          </div>
         ) : (
-          <p className="text-center text-gray-500 py-16">No hay otros sorteos disponibles por ahora.</p>
+          <p className="text-center text-gray-500">No hay otros sorteos disponibles por ahora.</p>
         )}
+        
+        <div className="text-center mt-12">
+          <Link href="/sorteos" className="bg-zenit-light hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors duration-300">
+            Ver Todos los Sorteos
+          </Link>
+        </div>
       </div>
-      
-      {/* Espaciador inferior (SIN CAMBIOS) */}
-      <div className="h-24"></div> 
     </>
   );
 }
